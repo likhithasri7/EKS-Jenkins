@@ -11,9 +11,9 @@ controller:
     annotations:
       kubernetes.io/ingress.class: nginx
       kubernetes.io/tls-acme: "false"
-    hostName: jenkins.devopsdemos.com 
+    hostName: jenkins.likhithasri.dev 
     jenkinsUrlProtocol: "https"
-    jenkinsUrl: "jenkins.devopsdemos.com"
+    jenkinsUrl: "jenkins.likhithasri.dev"
 # adminPassword: 
   resources:
     requests:
@@ -66,7 +66,7 @@ controller:
               - credentials:
                 - gitHubApp:
                     appID: ""
-                    description: "EKS jenkins GitHub app"
+                    description: "Likhitha Sri EKS Jenkins GitHub app"
                     id: ""
                     privateKey: |
                       -----BEGIN PRIVATE KEY-----
