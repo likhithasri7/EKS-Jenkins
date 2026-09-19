@@ -6,131 +6,104 @@
 
 </p>
 
-# Project Title
+# 🚀 EKS-Jenkins-CICD
 
-EKS-Jenkins-CICD  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=EKS%20-%20Jenkins%20-%20CICD&url=https://github.com/likhithasri7/EKS-Jenkins)
+Automate CI/CD by deploying **Jenkins** on an **AWS EKS Kubernetes Cluster** using **Terraform** and **Helm**. 
 
-## Description
+Leverage **Jenkins Configuration as Code (JCasC)** to automatically configure Jenkins. Authentication and authorization are handled using the **GitHub OAuth** plugin and the **Matrix-Auth** plugin. Automate CI/CD pipelines by setting up a GitHub App and scanning GitHub Repositories for the presence of a `Jenkinsfile` using the **GitHub Branch Source** plugin. Finally, configure dynamic **Kubernetes Pod Agents** on the EKS cluster to execute pipeline stages on demand.
 
-Automate CICD by deploying Jenkins on an AWS EKS Kubernetes cluster using Terraform and Helm.Leverage Jenkins Configuration as Code (JCasC) to configure Jenkins.Authentication and Authorization are using the GitHub OAuth plugin and the Matrix-Auth plugin.Automate CICD by setting up GitHub App and periodically scanning the GitHub Repos for the presence of a Jenkinsfile using the GitHub Branch Source plugin. Finally, Configure Kubernetes Agent to create Pods on the EKS Cluster to execute the various Pipeline stages.
+---
 
-<p align="center">
+## 🛠️ Prerequisites & Dependencies
 
-![image](https://user-images.githubusercontent.com/78129381/153651039-71dcf7c4-d22b-49d9-995d-5622409bb7ed.png)
+* **Docker & Docker Desktop** installed and running.
+* **AWS User** with programmatic access and IAM permissions for EKS and S3.
+* Existing **[EKS Kubernetes Cluster](https://github.com/likhithasri7/EKS-Terraform)** with Terraform remote state stored in S3.
+* **[NGINX Ingress Controller](https://github.com/likhithasri7/EKS-Nginx-Ingress)** installed on the cluster.
 
-![image](https://user-images.githubusercontent.com/78129381/153651338-928b6a90-b37f-465f-8e91-1ba7ee4019fd.png)
+---
 
-</p>
+## ⚙️ Configuration Setup
 
-## Getting Started
+### 1. GitHub OAuth App Setup
+Follow the [GitHub OAuth Plugin Guide](https://plugins.jenkins.io/github-oauth/):
+1. Visit [GitHub Developer Settings → OAuth Apps → Register a new application](https://github.com/settings/applications/new).
+2. Set the Authorization Callback URL to: `https://jenkins.example.com/securityRealm/finishLogin` (replace `jenkins.example.com` with your actual domain).
+3. Copy your **Client ID** and **Client Secret**.
 
-### Dependencies
+### 2. GitHub App Setup
+Follow the [CloudBees GitHub App Guide](https://docs.cloudbees.com/docs/cloudbees-ci/latest/traditional-admin-guide/github-app-auth#_adding_the_jenkins_credential) to generate your **App ID**, **ID**, and **Private Key (`.pem`)**.
 
-* Docker
-* AWS user with programmatic access and high privileges 
-* Linux terminal
-* Deploy an [EKS K8 Cluster](https://github.com/likhithasri7/EKS-Terraform) with Self managed Worker nodes on AWS using Terraform.
-* Deploy a [NGINX Ingress](https://github.com/likhithasri7/EKS-Nginx-Ingress) on the above EKS cluster (Pod->service->Ingress->ELB+ACM->Route 53->Domain URL).
-* GitHub OAuth Setup: Follow the steps outlined below.
+### 3. Project Configuration
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/likhithasri7/EKS-Jenkins.git
+   cd EKS-Jenkins
+   ```
+2. Create the external Docker shared volume:
+   ```bash
+   docker volume create aws-credentials
+   ```
+3. Update [chart_values.yaml](chart_values.yaml):
+   - Set `hostName` and `jenkinsUrl` under `controller.ingress`.
+   - Update `clientID` and `clientSecret` under `securityRealm.github`.
+   - Fill in `appID`, `id`, and paste `privateKey` under `credentials.system`.
+4. Update [kubernetes.tf](kubernetes.tf):
+   - Configure the AWS S3 bucket name and key for your remote EKS state.
 
- https://plugins.jenkins.io/github-oauth/
+---
 
-```
-Visit https://github.com/settings/applications/new to create a GitHub application registration.
+## 🚀 Execution Guide
 
-The values for application name, homepage URL, or application description don't matter. They can be customized however desired.
-
-However, the authorization callback URL takes a specific value. It must be https://jenkins.example.com/securityRealm/finishLogin where jenkins.example.com is the location of the Jenkins server.
-
-The important part of the callback URL is /securityRealm/finishLogin
-
-Finish by clicking Register application.
-```
-
-* GitHub App Setup: Follow the steps outlined below.
-
-https://docs.cloudbees.com/docs/cloudbees-ci/latest/traditional-admin-guide/github-app-auth#_adding_the_jenkins_credential
-
-### Installing
-
-* Clone the repository
-* Set environment variable TF_VAR_AWS_PROFILE
-* Review terraform variable values in variables.tf, locals.tf
-* Override values in the Helm chart through the "chart_values.yaml" file
-* Update GitHub oAuth ClientID & ClientSecret, GithubApp AppID, ID & Private Key attribue values.
-* Update kubernetes.tf with the AWS S3 bucket name and key name from the output of the [EKS K8 Cluster](https://github.com/likhithasri7/EKS-Terraform/blob/master/outputs.tf)
-
-### Executing program
-
-* Configure AWS user with AWS CLI.
-
-```
-docker-compose run --rm aws configure --profile $TF_VAR_AWS_PROFILE
-
+### 1. Configure AWS CLI inside Docker
+```powershell
+docker-compose run --rm aws configure --profile terraform
 docker-compose run --rm aws sts get-caller-identity
 ```
 
-* Specify appropriate Terraform workspace.
-
-```
-docker-compose run --rm terraform workspace show
-
+### 2. Run Terraform via Docker
+On **Windows (PowerShell)**:
+```powershell
+docker-compose run --rm terraform init
 docker-compose run --rm terraform workspace select default
+docker-compose run --rm terraform plan
+docker-compose run --rm terraform apply
 ```
 
-* Run Terraform apply to create the EKS cluster, k8 worker nodes and related AWS resources.
-
-```
+On **Linux / WSL / Bash**:
+```bash
+chmod +x run-docker-compose.sh
 ./run-docker-compose.sh terraform init
-
-./run-docker-compose.sh terraform validate
-
 ./run-docker-compose.sh terraform plan
-
 ./run-docker-compose.sh terraform apply
 ```
 
-* Verify jenkins pod is running and the Ingress is set correctly.
-
-```
-./run-docker-compose.sh kubectl get all -A | grep -i jenkins
-
-./run-docker-compose.sh kubectl get ingress -n cicd
-
-./run-docker-compose.sh kubectl get cm -n cicd
+### 3. Verify Deployment
+```powershell
+docker-compose run --rm kubectl get all -n cicd
+docker-compose run --rm kubectl get ingress -n cicd
 ```
 
-* Login to Jenkins using your Domain Https URL, prefixed by "jenkins." and enter your GitHub username and password to proceed with further steps below.
+---
 
-* Start a new item, select Github Organization, select "Github App" Credential, and your Github username or Organization as owner and apply. Check out the exact steps below for the Github-Branch-Source plugin.
+## 🔐 Accessing Jenkins & Running Pipelines
 
-https://docs.cloudbees.com/docs/cloudbees-ci/latest/cloud-admin-guide/github-branch-source-plugin
+1. Open `https://jenkins.<your-domain>.com` in your browser.
+2. Sign in with your **GitHub** account via OAuth.
+3. Create a **GitHub Organization** item in Jenkins:
+   - Select the **GitHub App** credential created earlier.
+   - Click **Scan Organization Now**.
+4. Jenkins will automatically detect any repository containing a `Jenkinsfile` and spin up dynamic Kubernetes agent pods on your EKS cluster to execute the pipeline stages.
+5. Visualize pipeline progress in real-time using **Jenkins BlueOcean**.
 
-* Scan organization Now and GitHub will check the GitHub Repositories for the presence of a Jenkinsfile and if present, will run the various stages. 
+---
 
-* The Kubernetes Agent in our Pipeline will create Pods on the EKS cluster to execute the various stages.
+## 👤 Author
 
-* The Stages can be visualized using the Blueocean Jenkins plugin that we have installed in our project.
+* **likhithasri7** - [GitHub Profile](https://github.com/likhithasri7)
 
-* Automate CICD by scheduling the subsequent GitHub Repository scans at desired intervals.
+---
 
-## Help
+## 📄 License
 
-## Authors
-
-[likhithasri7](https://github.com/likhithasri7)
-
-## Version History
-
-* 0.1
-    * Initial Release
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details
-
-## Repo rosters
-
-### Stargazers
-
-[![Stargazers repo roster for @likhithasri7/EKS-Jenkins](https://reporoster.com/stars/dark/likhithasri7/EKS-Jenkins)](https://github.com/likhithasri7/EKS-Jenkins/stargazers)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
